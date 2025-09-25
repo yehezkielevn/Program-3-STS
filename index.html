@@ -124,6 +124,28 @@
             box-shadow: 0 5px 15px rgba(255,193,7,0.3);
         }
 
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+        }
+
+        .btn-info:hover {
+            box-shadow: 0 5px 15px rgba(23,162,184,0.3);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 5px;
+        }
+
         .heroes-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -138,10 +160,16 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             border-left: 5px solid #007bff;
             transition: transform 0.3s;
+            position: relative;
         }
 
         .hero-card:hover {
             transform: translateY(-5px);
+        }
+
+        .hero-actions {
+            margin-top: 15px;
+            text-align: center;
         }
 
         .hero-card h3 {
@@ -376,6 +404,10 @@
                     <p><strong>ID:</strong> ${hero.id}</p>
                     <p><strong>Role:</strong> ${hero.role}</p>
                     <p><strong>Kesulitan:</strong> <span class="difficulty ${difficultyClass}">${hero.difficulty}</span></p>
+                    <div class="hero-actions">
+                        <button class="btn btn-info btn-small" onclick="editHero('${hero.id}', '${hero.name}', '${hero.role}', '${hero.difficulty}')">✏️ Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteHero('${hero.id}', '${hero.name}')">🗑️ Delete</button>
+                    </div>
                 `;
                 
                 heroesGrid.appendChild(heroCard);
@@ -436,6 +468,81 @@
                 jsonDisplay.textContent = JSON.stringify(heroesData, null, 2);
             } else {
                 jsonSection.style.display = 'none';
+            }
+        }
+
+        // Fungsi untuk edit hero
+        async function editHero(id, currentName, currentRole, currentDifficulty) {
+            // Prompt untuk input data baru
+            const newName = prompt(`Edit Nama Hero (saat ini: ${currentName}):`, currentName);
+            if (newName === null) return; // User cancel
+
+            const newRole = prompt(`Edit Role (saat ini: ${currentRole}):`, currentRole);
+            if (newRole === null) return; // User cancel
+
+            const newDifficulty = prompt(`Edit Tingkat Kesulitan (saat ini: ${currentDifficulty}):`, currentDifficulty);
+            if (newDifficulty === null) return; // User cancel
+
+            // Validasi input
+            if (newName.trim() === '' || newRole.trim() === '' || newDifficulty.trim() === '') {
+                alert('❌ Semua field harus diisi!');
+                return;
+            }
+
+            const updatedHero = {
+                name: newName.trim(),
+                role: newRole.trim(),
+                difficulty: newDifficulty.trim()
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatedHero)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                alert('✅ Hero berhasil diperbarui!');
+                
+                // Refresh data setelah berhasil update
+                loadHeroes();
+                
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        // Fungsi untuk delete hero
+        async function deleteHero(id, heroName) {
+            // Konfirmasi penghapusan
+            const confirmDelete = confirm(`Yakin mau hapus hero "${heroName}"?`);
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                alert('✅ Hero berhasil dihapus!');
+                
+                // Refresh data setelah berhasil delete
+                loadHeroes();
+                
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
             }
         }
 
