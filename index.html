@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Legends Heroes API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #007bff;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(40,167,69,0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #e0a800);
+        }
+
+        .btn-warning:hover {
+            box-shadow: 0 5px 15px rgba(255,193,7,0.3);
+        }
+
+        .heroes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .hero-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #007bff;
+            transition: transform 0.3s;
+        }
+
+        .hero-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .hero-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .hero-card p {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .difficulty {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .difficulty.mudah {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .difficulty.sedang {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .difficulty.sulit {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .json-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 Mobile Legends Heroes</h1>
+            <p>Kelola data hero Mobile Legends dengan REST API</p>
+        </div>
+
+        <div class="content">
+            <!-- Status Koneksi -->
+            <div id="connectionStatus" class="status">
+                <span id="statusText">Memeriksa koneksi...</span>
+            </div>
+
+            <!-- Form Tambah Hero -->
+            <div class="section">
+                <h2>➕ Tambah Hero Baru</h2>
+                <form id="addHeroForm">
+                    <div class="form-group">
+                        <label for="heroName">Nama Hero:</label>
+                        <input type="text" id="heroName" name="name" placeholder="Contoh: Zilong" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="heroRole">Role:</label>
+                        <select id="heroRole" name="role" required>
+                            <option value="">Pilih Role</option>
+                            <option value="Fighter">Fighter</option>
+                            <option value="Marksman">Marksman</option>
+                            <option value="Assassin">Assassin</option>
+                            <option value="Mage">Mage</option>
+                            <option value="Tank">Tank</option>
+                            <option value="Support">Support</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="heroDifficulty">Tingkat Kesulitan:</label>
+                        <select id="heroDifficulty" name="difficulty" required>
+                            <option value="">Pilih Tingkat Kesulitan</option>
+                            <option value="Mudah">Mudah</option>
+                            <option value="Sedang">Sedang</option>
+                            <option value="Sulit">Sulit</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">➕ Tambah Hero</button>
+                </form>
+                <div id="addMessage"></div>
+            </div>
+
+            <!-- Kontrol Data -->
+            <div class="section">
+                <h2>🔄 Kontrol Data</h2>
+                <button onclick="loadHeroes()" class="btn btn-warning">🔄 Refresh Data</button>
+                <button onclick="toggleJsonDisplay()" class="btn">📄 Toggle JSON View</button>
+            </div>
+
+            <!-- Daftar Heroes -->
+            <div class="section">
+                <h2>⚔️ Daftar Heroes</h2>
+                <div id="loading" class="loading" style="display: none;">
+                    ⏳ Memuat data heroes...
+                </div>
+                <div id="heroesContainer"></div>
+            </div>
+
+            <!-- Tampilan JSON -->
+            <div class="section" id="jsonSection" style="display: none;">
+                <h2>📄 Data JSON</h2>
+                <div id="jsonDisplay" class="json-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api/heroes';
+        let heroesData = [];
+
+        // Fungsi untuk menampilkan status koneksi
+        async function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (response.ok) {
+                    statusDiv.className = 'status online';
+                    statusText.textContent = '✅ Koneksi ke API berhasil';
+                } else {
+                    statusDiv.className = 'status offline';
+                    statusText.textContent = '❌ Server merespons dengan error';
+                }
+            } catch (error) {
+                statusDiv.className = 'status offline';
+                statusText.textContent = '❌ Tidak dapat terhubung ke API (Pastikan server Go berjalan di port 8080)';
+            }
+        }
+
+        // Fungsi untuk memuat data heroes
+        async function loadHeroes() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('heroesContainer');
+            const jsonDisplay = document.getElementById('jsonDisplay');
+            
+            loading.style.display = 'block';
+            container.innerHTML = '';
+
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                heroesData = await response.json();
+                displayHeroes(heroesData);
+                jsonDisplay.textContent = JSON.stringify(heroesData, null, 2);
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                jsonDisplay.textContent = `Error: ${error.message}`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Fungsi untuk menampilkan heroes dalam grid
+        function displayHeroes(heroes) {
+            const container = document.getElementById('heroesContainer');
+            
+            if (heroes.length === 0) {
+                container.innerHTML = '<div class="error">📭 Tidak ada data heroes</div>';
+                return;
+            }
+
+            const heroesGrid = document.createElement('div');
+            heroesGrid.className = 'heroes-grid';
+
+            heroes.forEach(hero => {
+                const heroCard = document.createElement('div');
+                heroCard.className = 'hero-card';
+                
+                const difficultyClass = hero.difficulty.toLowerCase().replace(/\s+/g, '');
+                
+                heroCard.innerHTML = `
+                    <h3>⚔️ ${hero.name}</h3>
+                    <p><strong>ID:</strong> ${hero.id}</p>
+                    <p><strong>Role:</strong> ${hero.role}</p>
+                    <p><strong>Kesulitan:</strong> <span class="difficulty ${difficultyClass}">${hero.difficulty}</span></p>
+                `;
+                
+                heroesGrid.appendChild(heroCard);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(heroesGrid);
+        }
+
+        // Fungsi untuk menambah hero baru
+        async function addHero(heroData) {
+            try {
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(heroData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const newHero = await response.json();
+                showMessage(`✅ Hero "${newHero.name}" berhasil ditambahkan!`, 'success');
+                
+                // Refresh data setelah berhasil menambah
+                loadHeroes();
+                
+                // Reset form
+                document.getElementById('addHeroForm').reset();
+                
+            } catch (error) {
+                showMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Fungsi untuk menampilkan pesan
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('addMessage');
+            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+            
+            // Hapus pesan setelah 5 detik
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Fungsi untuk toggle tampilan JSON
+        function toggleJsonDisplay() {
+            const jsonSection = document.getElementById('jsonSection');
+            const jsonDisplay = document.getElementById('jsonDisplay');
+            
+            if (jsonSection.style.display === 'none') {
+                jsonSection.style.display = 'block';
+                jsonDisplay.textContent = JSON.stringify(heroesData, null, 2);
+            } else {
+                jsonSection.style.display = 'none';
+            }
+        }
+
+        // Event listener untuk form
+        document.getElementById('addHeroForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const heroData = {
+                name: formData.get('name'),
+                role: formData.get('role'),
+                difficulty: formData.get('difficulty')
+            };
+
+            addHero(heroData);
+        });
+
+        // Inisialisasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            checkConnection();
+            loadHeroes();
+            
+            // Refresh status koneksi setiap 30 detik
+            setInterval(checkConnection, 30000);
+        });
+    </script>
+</body>
+</html>
