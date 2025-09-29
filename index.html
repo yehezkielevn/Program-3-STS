@@ -257,6 +257,40 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        .auth-status {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-status span {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .login-form {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+
+        .login-section {
+            display: none;
+        }
+
+        .login-section.active {
+            display: block;
+        }
+
+        .heroes-section {
+            display: block;
+        }
+
+        .heroes-section.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -264,6 +298,10 @@
         <div class="header">
             <h1>🏆 Mobile Legends Heroes</h1>
             <p>Kelola data hero Mobile Legends dengan REST API</p>
+            <div id="authStatus" class="auth-status">
+                <span id="authText">🔒 Belum Login</span>
+                <button id="logoutBtn" class="btn btn-danger btn-small" onclick="logout()" style="display: none;">🚪 Logout</button>
+            </div>
         </div>
 
         <div class="content">
@@ -272,67 +310,91 @@
                 <span id="statusText">Memeriksa koneksi...</span>
             </div>
 
-            <!-- Form Tambah Hero -->
-            <div class="section">
-                <h2>➕ Tambah Hero Baru</h2>
-                <form id="addHeroForm">
+            <!-- Login Section -->
+            <div id="loginSection" class="section login-section active">
+                <h2>🔐 Login Required</h2>
+                <p>Anda harus login terlebih dahulu untuk mengakses fitur CRUD heroes.</p>
+                <form id="loginForm" class="login-form">
                     <div class="form-group">
-                        <label for="heroName">Nama Hero:</label>
-                        <input type="text" id="heroName" name="name" placeholder="Contoh: Zilong" required>
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" placeholder="Masukkan username" required>
                     </div>
                     <div class="form-group">
-                        <label for="heroRole">Role:</label>
-                        <select id="heroRole" name="role" required>
-                            <option value="">Pilih Role</option>
-                            <option value="Fighter">Fighter</option>
-                            <option value="Marksman">Marksman</option>
-                            <option value="Assassin">Assassin</option>
-                            <option value="Mage">Mage</option>
-                            <option value="Tank">Tank</option>
-                            <option value="Support">Support</option>
-                        </select>
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" placeholder="Masukkan password" required>
                     </div>
-                    <div class="form-group">
-                        <label for="heroDifficulty">Tingkat Kesulitan:</label>
-                        <select id="heroDifficulty" name="difficulty" required>
-                            <option value="">Pilih Tingkat Kesulitan</option>
-                            <option value="Mudah">Mudah</option>
-                            <option value="Sedang">Sedang</option>
-                            <option value="Sulit">Sulit</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">➕ Tambah Hero</button>
+                    <button type="submit" class="btn btn-success">🔐 Login</button>
                 </form>
-                <div id="addMessage"></div>
+                <div id="loginMessage"></div>
             </div>
 
-            <!-- Kontrol Data -->
-            <div class="section">
-                <h2>🔄 Kontrol Data</h2>
-                <button onclick="loadHeroes()" class="btn btn-warning">🔄 Refresh Data</button>
-                <button onclick="toggleJsonDisplay()" class="btn">📄 Toggle JSON View</button>
-            </div>
-
-            <!-- Daftar Heroes -->
-            <div class="section">
-                <h2>⚔️ Daftar Heroes</h2>
-                <div id="loading" class="loading" style="display: none;">
-                    ⏳ Memuat data heroes...
+            <!-- Heroes Section -->
+            <div id="heroesSection" class="heroes-section hidden">
+                <!-- Form Tambah Hero -->
+                <div class="section">
+                    <h2>➕ Tambah Hero Baru</h2>
+                    <form id="addHeroForm">
+                        <div class="form-group">
+                            <label for="heroName">Nama Hero:</label>
+                            <input type="text" id="heroName" name="name" placeholder="Contoh: Zilong" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="heroRole">Role:</label>
+                            <select id="heroRole" name="role" required>
+                                <option value="">Pilih Role</option>
+                                <option value="Fighter">Fighter</option>
+                                <option value="Marksman">Marksman</option>
+                                <option value="Assassin">Assassin</option>
+                                <option value="Mage">Mage</option>
+                                <option value="Tank">Tank</option>
+                                <option value="Support">Support</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="heroDifficulty">Tingkat Kesulitan:</label>
+                            <select id="heroDifficulty" name="difficulty" required>
+                                <option value="">Pilih Tingkat Kesulitan</option>
+                                <option value="Mudah">Mudah</option>
+                                <option value="Sedang">Sedang</option>
+                                <option value="Sulit">Sulit</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">➕ Tambah Hero</button>
+                    </form>
+                    <div id="addMessage"></div>
                 </div>
-                <div id="heroesContainer"></div>
-            </div>
 
-            <!-- Tampilan JSON -->
-            <div class="section" id="jsonSection" style="display: none;">
-                <h2>📄 Data JSON</h2>
-                <div id="jsonDisplay" class="json-display"></div>
+                <!-- Kontrol Data -->
+                <div class="section">
+                    <h2>🔄 Kontrol Data</h2>
+                    <button onclick="loadHeroes()" class="btn btn-warning">🔄 Refresh Data</button>
+                    <button onclick="toggleJsonDisplay()" class="btn">📄 Toggle JSON View</button>
+                </div>
+
+                <!-- Daftar Heroes -->
+                <div class="section">
+                    <h2>⚔️ Daftar Heroes</h2>
+                    <div id="loading" class="loading" style="display: none;">
+                        ⏳ Memuat data heroes...
+                    </div>
+                    <div id="heroesContainer"></div>
+                </div>
+
+                <!-- Tampilan JSON -->
+                <div class="section" id="jsonSection" style="display: none;">
+                    <h2>📄 Data JSON</h2>
+                    <div id="jsonDisplay" class="json-display"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         const API_BASE_URL = 'http://localhost:8080/api/heroes';
+        const LOGIN_URL = 'http://localhost:8080/api/login';
+        const LOGOUT_URL = 'http://localhost:8080/api/logout';
         let heroesData = [];
+        let authToken = localStorage.getItem('authToken');
 
         // Fungsi untuk menampilkan status koneksi
         async function checkConnection() {
@@ -352,6 +414,39 @@
                 statusDiv.className = 'status offline';
                 statusText.textContent = '❌ Tidak dapat terhubung ke API (Pastikan server Go berjalan di port 8080)';
             }
+        }
+
+        // Fungsi untuk update UI berdasarkan status login
+        function updateAuthUI() {
+            const authText = document.getElementById('authText');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const loginSection = document.getElementById('loginSection');
+            const heroesSection = document.getElementById('heroesSection');
+
+            if (authToken) {
+                authText.textContent = '✅ Sudah Login';
+                logoutBtn.style.display = 'inline-block';
+                loginSection.classList.remove('active');
+                heroesSection.classList.remove('hidden');
+            } else {
+                authText.textContent = '🔒 Belum Login';
+                logoutBtn.style.display = 'none';
+                loginSection.classList.add('active');
+                heroesSection.classList.add('hidden');
+            }
+        }
+
+        // Fungsi untuk mendapatkan headers dengan authorization
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            
+            return headers;
         }
 
         // Fungsi untuk memuat data heroes
@@ -417,14 +512,71 @@
             container.appendChild(heroesGrid);
         }
 
+        // Fungsi untuk login
+        async function loginUser(username, password) {
+            try {
+                const response = await fetch(LOGIN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const loginData = await response.json();
+                authToken = loginData.token;
+                localStorage.setItem('authToken', authToken);
+                
+                showLoginMessage('✅ Login berhasil!', 'success');
+                updateAuthUI();
+                loadHeroes();
+                
+            } catch (error) {
+                showLoginMessage(`❌ Login gagal: ${error.message}`, 'error');
+            }
+        }
+
+        // Fungsi untuk logout
+        async function logout() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(LOGOUT_URL, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                authToken = null;
+                localStorage.removeItem('authToken');
+                updateAuthUI();
+                
+                alert('✅ Logout berhasil!');
+                
+            } catch (error) {
+                alert(`❌ Logout gagal: ${error.message}`);
+                // Force logout even if API call fails
+                authToken = null;
+                localStorage.removeItem('authToken');
+                updateAuthUI();
+            }
+        }
+
         // Fungsi untuk menambah hero baru
         async function addHero(heroData) {
             try {
                 const response = await fetch(API_BASE_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(heroData)
                 });
 
@@ -444,12 +596,29 @@
                 
             } catch (error) {
                 showMessage(`❌ Error: ${error.message}`, 'error');
+                // If unauthorized, redirect to login
+                if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                    authToken = null;
+                    localStorage.removeItem('authToken');
+                    updateAuthUI();
+                }
             }
         }
 
         // Fungsi untuk menampilkan pesan
         function showMessage(message, type) {
             const messageDiv = document.getElementById('addMessage');
+            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+            
+            // Hapus pesan setelah 5 detik
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Fungsi untuk menampilkan pesan login
+        function showLoginMessage(message, type) {
+            const messageDiv = document.getElementById('loginMessage');
             messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
             
             // Hapus pesan setelah 5 detik
@@ -498,9 +667,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/${id}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(updatedHero)
                 });
 
@@ -517,6 +684,12 @@
                 
             } catch (error) {
                 alert(`❌ Error: ${error.message}`);
+                // If unauthorized, redirect to login
+                if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                    authToken = null;
+                    localStorage.removeItem('authToken');
+                    updateAuthUI();
+                }
             }
         }
 
@@ -528,7 +701,8 @@
 
             try {
                 const response = await fetch(`${API_BASE_URL}/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
                 });
 
                 if (!response.ok) {
@@ -543,10 +717,32 @@
                 
             } catch (error) {
                 alert(`❌ Error: ${error.message}`);
+                // If unauthorized, redirect to login
+                if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                    authToken = null;
+                    localStorage.removeItem('authToken');
+                    updateAuthUI();
+                }
             }
         }
 
-        // Event listener untuk form
+        // Event listener untuk form login
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const username = formData.get('username');
+            const password = formData.get('password');
+
+            if (username.trim() === '' || password.trim() === '') {
+                showLoginMessage('❌ Username dan password harus diisi!', 'error');
+                return;
+            }
+
+            loginUser(username, password);
+        });
+
+        // Event listener untuk form add hero
         document.getElementById('addHeroForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -563,7 +759,12 @@
         // Inisialisasi saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function() {
             checkConnection();
-            loadHeroes();
+            updateAuthUI();
+            
+            // Jika sudah login, load heroes
+            if (authToken) {
+                loadHeroes();
+            }
             
             // Refresh status koneksi setiap 30 detik
             setInterval(checkConnection, 30000);

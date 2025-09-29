@@ -3,11 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v3"
 )
 
 // Hero represents a Mobile Legends hero
@@ -18,9 +24,38 @@ type Hero struct {
 	Difficulty string `json:"difficulty"`
 }
 
+// User represents a user for authentication
+type User struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+// Config represents the configuration file structure
+type Config struct {
+	Users []User `yaml:"users"`
+}
+
+// LoginRequest represents login request
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// LoginResponse represents login response
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+
 // Heroes slice to store heroes in memory
 var heroes []Hero
 var nextID int = 4 // Starting from 4 since we have 3 initial heroes
+
+// Authentication
+var (
+	validTokens = make(map[string]time.Time)
+	tokenMutex  sync.RWMutex
+	config      Config
+)
 
 // CORS middleware to add CORS headers
 func corsMiddleware(next http.Handler) http.Handler {
@@ -32,6 +67,41 @@ func corsMiddleware(next http.Handler) http.Handler {
 		// Handle preflight OPTIONS request
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Authentication middleware
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			respondWithError(w, http.StatusUnauthorized, "Authorization header required")
+			return
+		}
+
+		// Check if header starts with "Bearer "
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			respondWithError(w, http.StatusUnauthorized, "Invalid authorization format")
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token == "" {
+			respondWithError(w, http.StatusUnauthorized, "Token required")
+			return
+		}
+
+		// Check if token is valid
+		tokenMutex.RLock()
+		_, exists := validTokens[token]
+		tokenMutex.RUnlock()
+
+		if !exists {
+			respondWithError(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}
 
@@ -54,6 +124,89 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 // Error response helper
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})
+}
+
+// Load configuration from config.yaml
+func loadConfig() error {
+	data, err := ioutil.ReadFile("config.yaml")
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Clean expired tokens (run in background)
+func cleanExpiredTokens() {
+	for {
+		time.Sleep(30 * time.Minute) // Clean every 30 minutes
+		tokenMutex.Lock()
+		now := time.Now()
+		for token, expiry := range validTokens {
+			if now.After(expiry) {
+				delete(validTokens, token)
+			}
+		}
+		tokenMutex.Unlock()
+	}
+}
+
+// POST /api/login - Login endpoint
+func login(w http.ResponseWriter, r *http.Request) {
+	var loginReq LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Validate credentials
+	var userFound bool
+	for _, user := range config.Users {
+		if user.Username == loginReq.Username && user.Password == loginReq.Password {
+			userFound = true
+			break
+		}
+	}
+
+	if !userFound {
+		respondWithError(w, http.StatusUnauthorized, "Invalid username or password")
+		return
+	}
+
+	// Generate token
+	token := uuid.New().String()
+	tokenMutex.Lock()
+	validTokens[token] = time.Now().Add(24 * time.Hour) // Token valid for 24 hours
+	tokenMutex.Unlock()
+
+	respondWithJSON(w, http.StatusOK, LoginResponse{Token: token})
+}
+
+// POST /api/logout - Logout endpoint
+func logout(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithError(w, http.StatusUnauthorized, "Authorization header required")
+		return
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	if token == "" {
+		respondWithError(w, http.StatusUnauthorized, "Token required")
+		return
+	}
+
+	// Remove token
+	tokenMutex.Lock()
+	delete(validTokens, token)
+	tokenMutex.Unlock()
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
 
 // GET /api/heroes - Get all heroes
@@ -140,8 +293,16 @@ func initHeroes() {
 }
 
 func main() {
+	// Load configuration
+	if err := loadConfig(); err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
 	// Initialize heroes data
 	initHeroes()
+
+	// Start token cleanup goroutine
+	go cleanExpiredTokens()
 
 	// Create router
 	router := mux.NewRouter()
@@ -151,12 +312,32 @@ func main() {
 
 	// API routes
 	api := router.PathPrefix("/api").Subrouter()
+
+	// Authentication routes (no auth required)
+	api.HandleFunc("/login", login).Methods("POST")
+	api.HandleFunc("/logout", logout).Methods("POST")
+
+	// Heroes routes (auth required)
 	api.HandleFunc("/heroes", getHeroes).Methods("GET")
-	api.HandleFunc("/heroes", createHero).Methods("POST")
-	api.HandleFunc("/heroes/{id}", updateHero).Methods("PUT")
-	api.HandleFunc("/heroes/{id}", deleteHero).Methods("DELETE")
+	api.HandleFunc("/heroes", authMiddleware(http.HandlerFunc(createHero)).ServeHTTP).Methods("POST")
+	api.HandleFunc("/heroes/{id}", authMiddleware(http.HandlerFunc(updateHero)).ServeHTTP).Methods("PUT")
+	api.HandleFunc("/heroes/{id}", authMiddleware(http.HandlerFunc(deleteHero)).ServeHTTP).Methods("DELETE")
 
 	// Handle OPTIONS requests for all routes
+	api.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}).Methods("OPTIONS")
+
+	api.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}).Methods("OPTIONS")
+
 	api.HandleFunc("/heroes", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -174,10 +355,12 @@ func main() {
 	// Start server
 	fmt.Println("Server starting on port 8080...")
 	fmt.Println("Available endpoints:")
+	fmt.Println("  POST   /api/login      - Login")
+	fmt.Println("  POST   /api/logout     - Logout")
 	fmt.Println("  GET    /api/heroes     - Get all heroes")
-	fmt.Println("  POST   /api/heroes     - Create new hero")
-	fmt.Println("  PUT    /api/heroes/{id} - Update hero")
-	fmt.Println("  DELETE /api/heroes/{id} - Delete hero")
+	fmt.Println("  POST   /api/heroes     - Create new hero (Auth Required)")
+	fmt.Println("  PUT    /api/heroes/{id} - Update hero (Auth Required)")
+	fmt.Println("  DELETE /api/heroes/{id} - Delete hero (Auth Required)")
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
