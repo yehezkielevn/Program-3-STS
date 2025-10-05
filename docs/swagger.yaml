@@ -1,0 +1,208 @@
+basePath: /api
+definitions:
+  main.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  main.Hero:
+    properties:
+      created_at:
+        type: string
+      difficulty:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  main.HeroCreateRequest:
+    properties:
+      difficulty:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    required:
+    - difficulty
+    - name
+    - role
+    type: object
+  main.HeroUpdateRequest:
+    properties:
+      difficulty:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    required:
+    - difficulty
+    - name
+    - role
+    type: object
+  main.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: REST API for managing Mobile Legends heroes with PostgreSQL database
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Mobile Legends Heroes API
+  version: "1.0"
+paths:
+  /api/heroes:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all heroes from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Hero'
+            type: array
+      summary: Get all heroes
+      tags:
+      - heroes
+    post:
+      consumes:
+      - application/json
+      description: Create a new hero in the database
+      parameters:
+      - description: Hero data
+        in: body
+        name: hero
+        required: true
+        schema:
+          $ref: '#/definitions/main.HeroCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.Hero'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new hero
+      tags:
+      - heroes
+  /api/heroes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing hero by ID
+      parameters:
+      - description: Hero ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete hero by ID
+      tags:
+      - heroes
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific hero by ID
+      parameters:
+      - description: Hero ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Hero'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get hero by ID
+      tags:
+      - heroes
+    put:
+      consumes:
+      - application/json
+      description: Update an existing hero by ID
+      parameters:
+      - description: Hero ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Hero data
+        in: body
+        name: hero
+        required: true
+        schema:
+          $ref: '#/definitions/main.HeroUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Hero'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update hero by ID
+      tags:
+      - heroes
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
